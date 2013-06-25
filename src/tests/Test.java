@@ -84,7 +84,6 @@ public class Test {
 	
 	public static void main(String[] args) {
 		init();
-		sendMail("abctacoz@gmail.com", "JavaMail", "JavaMail is cool");
 		checkMail();
 	}
 
