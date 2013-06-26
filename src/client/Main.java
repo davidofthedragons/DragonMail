@@ -23,9 +23,12 @@ public class Main {
 	static JTextArea console = new JTextArea(5, 50);
 	
 	public Main() {
+		//console.setEditable(false);
+		loadGUI();
 		if(!loadSettings()) {
 			loadSettingsGUI();
 		}
+		
 	}
 	
 	public boolean loadSettings() {
@@ -56,6 +59,42 @@ public class Main {
 	public void loadGUI() {
 		JFrame frame = new JFrame("DragonMail " + version);
 		frame.setSize(1000, 600);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setLocationRelativeTo(null);
+		frame.setLayout(new BorderLayout());
+		frame.add(console, BorderLayout.SOUTH);
+		JPanel messagePanel = new JPanel();
+		JTextArea messageArea = new JTextArea(20, 50);
+		frame.add(messagePanel, BorderLayout.CENTER);
+		JPanel buttonPanel = new JPanel();
+		JButton checkButton = new JButton("Check Mail");
+		checkButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				checkMail();
+			}
+		});
+		buttonPanel.add(checkButton);
+		JButton composeButton = new JButton("Compose");
+		composeButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				
+			}
+		});
+		buttonPanel.add(composeButton);
+		JButton sendButton = new JButton("Send");
+		sendButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				
+			}
+		});
+		sendButton.setEnabled(false);
+		buttonPanel.add(sendButton);
+		frame.add(buttonPanel, BorderLayout.NORTH);
+		frame.setVisible(true);
+	}
+	
+	public DMessage[] checkMail() {
+		return null;
 	}
 	
 	public void loadSettingsGUI() {
@@ -90,7 +129,7 @@ public class Main {
 		});
 		main.add(saveButton);
 		frame.add(main, BorderLayout.CENTER);
-		frame.add(new JScrollPane(console), BorderLayout.SOUTH);
+		//frame.add(console, BorderLayout.SOUTH);
 		frame.setVisible(true);
 		printMessage("Testing console");
 	}
