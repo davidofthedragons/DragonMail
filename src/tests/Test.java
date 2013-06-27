@@ -17,7 +17,7 @@ public class Test {
 	private static String host = "smtp.gmail.com";
 	private static String from = "davidofthedragons@gmail.com";
 	private static String username = "davidofthedragons@gmail.com";
-	private static String password = "flyw/dragons";
+	private static String password = "<password>";
 	private static Properties props;
 	private static Authenticator auth = new Authenticator() {
 		private PasswordAuthentication pa = new PasswordAuthentication(username, password);
