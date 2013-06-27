@@ -28,13 +28,13 @@ public class DMessage {
 		for(int i=0; i<message.getRecipients(RecipientType.TO).length; i++) {
 			to[i] = message.getRecipients(RecipientType.TO)[i].toString();
 		}
-		cc = new String[message.getRecipients(RecipientType.CC).length];
-		for(int i=0; i<message.getRecipients(RecipientType.CC).length; i++) {
+		cc = (message.getRecipients(RecipientType.CC)!=null)? new String[message.getRecipients(RecipientType.CC).length] : new String[0];
+		for(int i=0; i<cc.length; i++) {
 			cc[i] = message.getRecipients(RecipientType.CC)[i].toString();
 		}
-		bcc = new String[message.getRecipients(RecipientType.BCC).length];
-		for(int i=0; i<message.getRecipients(RecipientType.BCC).length; i++) {
-			cc[i] = message.getRecipients(RecipientType.BCC)[i].toString();
+		bcc = (message.getRecipients(RecipientType.BCC)!=null)? new String[message.getRecipients(RecipientType.BCC).length] : new String[0];
+		for(int i=0; i<bcc.length; i++) {
+			bcc[i] = message.getRecipients(RecipientType.BCC)[i].toString();
 		}
 		id = Integer.toString(message.getMessageNumber());
 		date = message.getSentDate();

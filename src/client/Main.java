@@ -1,25 +1,36 @@
 package client;
 
 import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.StringTokenizer;
 
 import javax.swing.*;
 import javax.mail.*;
+import javax.mail.Flags.Flag;
 import javax.mail.internet.*;
+import javax.mail.search.FlagTerm;
+
 import com.sun.mail.*;
 
 public class Main {
 	
-	String version = "v0.1";
+	String version = "v0.2";
 	File settingsFile = new File(".mailsettings");
 	String username, password, host, port;
-	Properties props;
+	Properties props = new Properties();
+	Session session;
+	Authenticator auth;
 	static JTextArea console = new JTextArea(5, 50);
 	
 	public Main() {
@@ -27,8 +38,25 @@ public class Main {
 		loadGUI();
 		if(!loadSettings()) {
 			loadSettingsGUI();
+			return;
 		}
-		
+		init();
+	}
+	
+	public void init() {
+		auth = new Authenticator() {
+			private PasswordAuthentication pa = new PasswordAuthentication(username, password);
+			public PasswordAuthentication getPasswordAuthentication() {
+				return pa;
+			}
+		};
+		props.put("mail.smtp.host", host);
+		props.put("mail.smtp.port", port);
+		props.put("mail.smtp.ssl.enable", true);
+		props.put("mail.smtp.auth", true);
+		props.put("mail.store.protocol", "imaps");
+		session = Session.getInstance(props, auth);
+		checkMail();
 	}
 	
 	public boolean loadSettings() {
@@ -39,6 +67,7 @@ public class Main {
 			password = scanner.nextLine();
 			host = scanner.nextLine();
 			port = scanner.nextLine();
+			scanner.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 			printMessage(e.getMessage());
@@ -49,6 +78,17 @@ public class Main {
 	
 	public void writeSettings() {
 		printMessage("host: " + host + ":" + port);
+		try {
+			PrintWriter writer = new PrintWriter(settingsFile);
+			writer.write(username + "\n");
+			writer.write(password + "\n");
+			writer.write(host + "\n");
+			writer.write(port + "\n");
+			writer.flush();
+			writer.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public static void printMessage(String message) {
@@ -62,39 +102,150 @@ public class Main {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setLocationRelativeTo(null);
 		frame.setLayout(new BorderLayout());
-		frame.add(console, BorderLayout.SOUTH);
-		JPanel messagePanel = new JPanel();
-		JTextArea messageArea = new JTextArea(20, 50);
+		//frame.add(console, BorderLayout.SOUTH);
+		JSplitPane messagePanel = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		final JTextArea messageArea = new JTextArea(10, 10);
+		messagePanel.setRightComponent(messageArea);
 		frame.add(messagePanel, BorderLayout.CENTER);
+		
+		JPanel infoPanel = new JPanel();
+		infoPanel.setLayout(new GridBagLayout());
+		GridBagConstraints label = new GridBagConstraints();
+		GridBagConstraints field = new GridBagConstraints();
+		
+		//label.weightx = .01;
+		//field.weightx = .1;
+		label.gridx = 0;
+		label.gridy = 0;
+		field.gridx = 1;
+		field.gridy = 0;
+		infoPanel.add(new JLabel("To"), label);
+		final JTextField toField = new JTextField(30);
+		toField.setEditable(false);
+		infoPanel.add(toField, field);
+		label.gridy = 1;
+		field.gridy = 1;
+		infoPanel.add(new JLabel("From "), label);
+		final JTextField fromField = new JTextField(30);
+		fromField.setEditable(false);
+		infoPanel.add(fromField, field);
+		label.gridx = 2;
+		label.gridy = 0;
+		field.gridx = 3;
+		field.gridy = 0;
+		infoPanel.add(new JLabel("CC"), label);
+		final JTextField ccField = new JTextField(30);
+		ccField.setEditable(false);
+		infoPanel.add(ccField, field);
+		label.gridy = 1;
+		field.gridy = 1;
+		infoPanel.add(new JLabel("BCC"), label);
+		final JTextField bccField = new JTextField(30);
+		bccField.setEditable(false);
+		infoPanel.add(bccField, field);
+		label.gridy = 2;
+		field.gridy = 2;
+		label.gridx = 0;
+		field.gridx = 1;
+		field.gridwidth = 4;
+		infoPanel.add(new JLabel("Subject "), label);
+		final JTextField subjectField = new JTextField(63);
+		subjectField.setEditable(false);
+		infoPanel.add(subjectField, field);
+		messagePanel.setLeftComponent(infoPanel);
+		
+		field.gridx = 4;
+		field.gridy = 0;
 		JPanel buttonPanel = new JPanel();
-		JButton checkButton = new JButton("Check Mail");
-		checkButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				checkMail();
-			}
-		});
-		buttonPanel.add(checkButton);
-		JButton composeButton = new JButton("Compose");
-		composeButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				
-			}
-		});
-		buttonPanel.add(composeButton);
-		JButton sendButton = new JButton("Send");
+		final JButton sendButton = new JButton("Send");
 		sendButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				
+				DMessage m = new DMessage();
+				StringTokenizer t = new StringTokenizer(toField.getText(), "; ");
+				String[] array = new String[t.countTokens()];
+				if(array.length == 0) {
+					printMessage("Message must have at least one recipient");
+					return;
+				}
+				for(int i=0; i<array.length; i++) {
+					array[i] = t.nextToken();
+				}
+				m.setTo(array);
+				m.setFrom(username);
+				t = new StringTokenizer(ccField.getText(), "; ");
+				for(int i=0; i<array.length; i++) {
+					array[i] = t.nextToken();
+				}
+				m.setcc(array);
+				//TODO bcc, subject, and content
 			}
 		});
 		sendButton.setEnabled(false);
-		buttonPanel.add(sendButton);
+		JButton checkButton = new JButton("Check Mail");
+		checkButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				messageArea.setEditable(false);
+				checkMail();
+				sendButton.setEnabled(false);
+				fromField.setEnabled(true);
+				toField.setEditable(false);
+				ccField.setEditable(false);
+				bccField.setEditable(false);
+				subjectField.setEditable(false);
+			}
+		});
+		infoPanel.add(checkButton, field);
+		
+		JButton composeButton = new JButton("Compose");
+		composeButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				sendButton.setEnabled(true);
+				fromField.setEnabled(false);
+				toField.setEditable(true);
+				ccField.setEditable(true);
+				bccField.setEditable(true);
+				subjectField.setEditable(true);
+			}
+		});
+		field.gridy = 1;
+		infoPanel.add(composeButton, field);
+		
+		field.gridy = 2;
+		infoPanel.add(sendButton, field);
 		frame.add(buttonPanel, BorderLayout.NORTH);
 		frame.setVisible(true);
 	}
 	
 	public DMessage[] checkMail() {
+		printMessage("Checking Mail...");
+		try {
+			Store store = session.getStore("imaps");
+			store.connect("imap.gmail.com", username, password);
+			Folder inbox = store.getFolder("Inbox");
+			printMessage(inbox.getUnreadMessageCount() + " unread message(s)");
+			inbox.open(Folder.READ_WRITE);
+			Message messages[] = inbox.search(new FlagTerm(new Flags(Flag.SEEN), false));
+			FetchProfile fp = new FetchProfile();
+			fp.add(FetchProfile.Item.ENVELOPE);
+			fp.add(FetchProfile.Item.CONTENT_INFO);
+			inbox.fetch(messages, fp);
+			inbox.setFlags(messages, new Flags(Flags.Flag.SEEN), true);
+			DMessage[] dm = new DMessage[messages.length];
+			for(int i=0; i<messages.length; i++) {
+				dm[i] = new DMessage(messages[i]);
+			}
+			return dm;
+		} catch (MessagingException e) {
+			printMessage(e.getMessage());
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		return null;
+	}
+	
+	public void sendMessage(DMessage message) {
+		
 	}
 	
 	public void loadSettingsGUI() {
@@ -125,13 +276,14 @@ public class Main {
 				}
 				writeSettings();
 				frame.setVisible(false);
+				init();
 			}
 		});
 		main.add(saveButton);
 		frame.add(main, BorderLayout.CENTER);
 		//frame.add(console, BorderLayout.SOUTH);
 		frame.setVisible(true);
-		printMessage("Testing console");
+		//printMessage("Testing console");
 	}
 
 	public static void main(String[] args) {
