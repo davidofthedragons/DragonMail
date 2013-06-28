@@ -3,9 +3,13 @@ package client;
 import java.io.IOException;
 import java.util.Date;
 
+import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Message.RecipientType;
+import javax.mail.Session;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 public class DMessage {
 	
@@ -58,5 +62,27 @@ public class DMessage {
 	public Date getDate() {return date;}
 	public String getid() {return id;}
 	
-	
+	public MimeMessage getMimeMessage(Session session) throws MessagingException {
+		MimeMessage m = new MimeMessage(session);
+		m.setFrom(from);
+		Address[] addresses = new Address[to.length];
+		for(int i=0; i<to.length; i++) {
+			addresses[i] = new InternetAddress(to[i]);
+		}
+		m.setRecipients(RecipientType.TO, addresses);
+		addresses = new Address[cc.length];
+		for(int i=0; i<cc.length; i++) {
+			addresses[i] = new InternetAddress(cc[i]);
+		}
+		m.setRecipients(RecipientType.CC, addresses);
+		addresses = new Address[bcc.length];
+		for(int i=0; i<bcc.length; i++) {
+			addresses[i] = new InternetAddress(bcc[i]);
+		}
+		m.setRecipients(RecipientType.BCC, addresses);
+		m.setSubject(subject);
+		m.setText(content);
+		m.setSentDate(new Date());
+		return m;
+	}
 }

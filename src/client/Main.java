@@ -173,11 +173,20 @@ public class Main {
 				m.setTo(array);
 				m.setFrom(username);
 				t = new StringTokenizer(ccField.getText(), "; ");
+				array = new String[t.countTokens()];
 				for(int i=0; i<array.length; i++) {
 					array[i] = t.nextToken();
 				}
 				m.setcc(array);
-				//TODO bcc, subject, and content
+				t = new StringTokenizer(bccField.getText(), "; ");
+				array = new String[t.countTokens()];
+				for(int i=0; i<array.length; i++) {
+					array[i] = t.nextToken();
+				}
+				m.setbcc(array);
+				m.setSubject(subjectField.getText());
+				m.setContent(messageArea.getText());
+				sendMail(m);
 			}
 		});
 		sendButton.setEnabled(false);
@@ -205,6 +214,7 @@ public class Main {
 				ccField.setEditable(true);
 				bccField.setEditable(true);
 				subjectField.setEditable(true);
+				messageArea.setEditable(true);
 			}
 		});
 		field.gridy = 1;
@@ -244,8 +254,16 @@ public class Main {
 		return null;
 	}
 	
-	public void sendMessage(DMessage message) {
-		
+	public void sendMail(DMessage message) {
+		try {
+			MimeMessage m = message.getMimeMessage(session);
+			printMessage("Sending message titled \"" + message.getSubject() + "\"");
+			Transport.send(m);
+			printMessage("Done");
+		} catch(MessagingException e) {
+			e.printStackTrace();
+			printMessage("Message send failure");
+		}
 	}
 	
 	public void loadSettingsGUI() {
