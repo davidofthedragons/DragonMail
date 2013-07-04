@@ -10,22 +10,11 @@
 
 package client;
 
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
 import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Properties;
-import java.util.Scanner;
-import java.util.StringTokenizer;
+import java.util.*;
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -35,23 +24,19 @@ import javax.mail.Flags.Flag;
 import javax.mail.internet.*;
 import javax.mail.search.FlagTerm;
 
-import com.sun.mail.*;
-
 public class Main {
-	
-	String version = "Beta v1.0";
+	String version = "Beta v1.1";
 	File settingsFile = new File(".mailsettings");
 	String username, password, host, port;
 	Properties props = new Properties();
 	Session session;
 	Authenticator auth;
-	static JTextArea console = new JTextArea(5, 50);
+	static JTextArea console = new JTextArea(5, 50); //Unimplemented
 	DefaultListModel listModel = new DefaultListModel();
 	ArrayList<DMessage> messages = new ArrayList<DMessage>();
 	JList messageList = new JList();
 	
 	public Main() {
-		//console.setEditable(false);
 		loadGUI();
 		if(!loadSettings()) {
 			loadSettingsGUI();
@@ -89,7 +74,6 @@ public class Main {
 			e.printStackTrace();
 			printMessage(e.getMessage());
 		}
-		
 		return true;
 	}
 	
@@ -136,8 +120,6 @@ public class Main {
 		GridBagConstraints label = new GridBagConstraints();
 		GridBagConstraints field = new GridBagConstraints();
 		
-		//label.weightx = .01;
-		//field.weightx = .1;
 		label.gridx = 0;
 		label.gridy = 0;
 		field.gridx = 1;
@@ -175,7 +157,6 @@ public class Main {
 		final JTextField subjectField = new JTextField(63);
 		subjectField.setEditable(false);
 		infoPanel.add(subjectField, field);
-		//messagePane.setLeftComponent(infoPanel);
 		messagePanel.add(infoPanel, BorderLayout.NORTH);
 		field.gridx = 4;
 		field.gridy = 0;
@@ -254,7 +235,6 @@ public class Main {
 		
 		messageList.addListSelectionListener(new ListSelectionListener() {
 			public void valueChanged(ListSelectionEvent e) {
-				//if(e.getValueIsAdjusting()) return;
 				toField.setEditable(false);
 				fromField.setEditable(false);
 				fromField.setEnabled(true);
@@ -264,7 +244,6 @@ public class Main {
 				messageArea.setEditable(false);
 				
 				DMessage m = messages.get(messageList.getSelectedIndex());
-				//System.out.println(e.getLastIndex());
 				toField.setText(m.getToString());
 				fromField.setText(m.getFrom());
 				ccField.setText(m.getccString());
@@ -286,13 +265,13 @@ public class Main {
 			store.connect("imap.gmail.com", username, password);
 			Folder inbox = store.getFolder("Inbox");
 			printMessage(inbox.getUnreadMessageCount() + " unread message(s)");
-			inbox.open(Folder.READ_ONLY);//inbox.open(Folder.READ_WRITE);
+			inbox.open(Folder.READ_WRITE);
 			Message messages[] = inbox.search(new FlagTerm(new Flags(Flag.SEEN), false));
 			FetchProfile fp = new FetchProfile();
 			fp.add(FetchProfile.Item.ENVELOPE);
 			fp.add(FetchProfile.Item.CONTENT_INFO);
 			inbox.fetch(messages, fp);
-			//inbox.setFlags(messages, new Flags(Flags.Flag.SEEN), true);
+			inbox.setFlags(messages, new Flags(Flags.Flag.SEEN), true);
 			DMessage[] dm = new DMessage[messages.length];
 			for(int i=0; i<messages.length; i++) {
 				dm[i] = new DMessage(messages[i]);
@@ -363,9 +342,7 @@ public class Main {
 		});
 		main.add(saveButton);
 		frame.add(main, BorderLayout.CENTER);
-		//frame.add(console, BorderLayout.SOUTH);
 		frame.setVisible(true);
-		//printMessage("Testing console");
 	}
 
 	public static void main(String[] args) {
