@@ -1,3 +1,13 @@
+/********************************
+ * DragonMail Email Client      *
+ * (C) 2013 David Gardner       *
+ *                              *
+ * Source released under the    *
+ * 	GNU General Public License  *
+ *                              *
+ ********************************/
+
+
 package client;
 
 import java.awt.BorderLayout;
@@ -10,12 +20,16 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.StringTokenizer;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.mail.*;
 import javax.mail.Flags.Flag;
 import javax.mail.internet.*;
@@ -25,13 +39,16 @@ import com.sun.mail.*;
 
 public class Main {
 	
-	String version = "v0.2";
+	String version = "Beta v1.0";
 	File settingsFile = new File(".mailsettings");
 	String username, password, host, port;
 	Properties props = new Properties();
 	Session session;
 	Authenticator auth;
 	static JTextArea console = new JTextArea(5, 50);
+	DefaultListModel listModel = new DefaultListModel();
+	ArrayList<DMessage> messages = new ArrayList<DMessage>();
+	JList messageList = new JList();
 	
 	public Main() {
 		//console.setEditable(false);
@@ -56,7 +73,7 @@ public class Main {
 		props.put("mail.smtp.auth", true);
 		props.put("mail.store.protocol", "imaps");
 		session = Session.getInstance(props, auth);
-		checkMail();
+		addToList(checkMail());
 	}
 	
 	public boolean loadSettings() {
@@ -103,10 +120,16 @@ public class Main {
 		frame.setLocationRelativeTo(null);
 		frame.setLayout(new BorderLayout());
 		//frame.add(console, BorderLayout.SOUTH);
-		JSplitPane messagePanel = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		JSplitPane messagePane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		JPanel messagePanel = new JPanel();
+		messagePanel.setLayout(new BorderLayout());
 		final JTextArea messageArea = new JTextArea(10, 10);
-		messagePanel.setRightComponent(messageArea);
-		frame.add(messagePanel, BorderLayout.CENTER);
+		messagePanel.add(messageArea, BorderLayout.CENTER);
+		messagePane.setRightComponent(messagePanel);
+		messageList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		messageList.setLayoutOrientation(JList.VERTICAL);
+		messageList.setVisibleRowCount(5);
+		messagePane.setLeftComponent(new JScrollPane(messageList));
 		
 		JPanel infoPanel = new JPanel();
 		infoPanel.setLayout(new GridBagLayout());
@@ -152,11 +175,10 @@ public class Main {
 		final JTextField subjectField = new JTextField(63);
 		subjectField.setEditable(false);
 		infoPanel.add(subjectField, field);
-		messagePanel.setLeftComponent(infoPanel);
-		
+		//messagePane.setLeftComponent(infoPanel);
+		messagePanel.add(infoPanel, BorderLayout.NORTH);
 		field.gridx = 4;
 		field.gridy = 0;
-		JPanel buttonPanel = new JPanel();
 		final JButton sendButton = new JButton("Send");
 		sendButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -194,7 +216,7 @@ public class Main {
 		checkButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				messageArea.setEditable(false);
-				checkMail();
+				addToList(checkMail());
 				sendButton.setEnabled(false);
 				fromField.setEnabled(true);
 				toField.setEditable(false);
@@ -214,6 +236,12 @@ public class Main {
 				ccField.setEditable(true);
 				bccField.setEditable(true);
 				subjectField.setEditable(true);
+				toField.setText("");
+				fromField.setText("");
+				ccField.setText("");
+				bccField.setText("");
+				subjectField.setText("");
+				messageArea.setText("");
 				messageArea.setEditable(true);
 			}
 		});
@@ -222,7 +250,32 @@ public class Main {
 		
 		field.gridy = 2;
 		infoPanel.add(sendButton, field);
-		frame.add(buttonPanel, BorderLayout.NORTH);
+		messagePanel.add(infoPanel, BorderLayout.NORTH);
+		
+		messageList.addListSelectionListener(new ListSelectionListener() {
+			public void valueChanged(ListSelectionEvent e) {
+				//if(e.getValueIsAdjusting()) return;
+				toField.setEditable(false);
+				fromField.setEditable(false);
+				fromField.setEnabled(true);
+				ccField.setEditable(false);
+				bccField.setEditable(false);
+				subjectField.setEditable(false);
+				messageArea.setEditable(false);
+				
+				DMessage m = messages.get(messageList.getSelectedIndex());
+				//System.out.println(e.getLastIndex());
+				toField.setText(m.getToString());
+				fromField.setText(m.getFrom());
+				ccField.setText(m.getccString());
+				bccField.setText(m.getbccString());
+				subjectField.setText(m.getSubject());
+				messageArea.setText(m.getContent());
+			}
+		});
+		
+		frame.add(messagePane, BorderLayout.CENTER);
+		
 		frame.setVisible(true);
 	}
 	
@@ -233,13 +286,13 @@ public class Main {
 			store.connect("imap.gmail.com", username, password);
 			Folder inbox = store.getFolder("Inbox");
 			printMessage(inbox.getUnreadMessageCount() + " unread message(s)");
-			inbox.open(Folder.READ_WRITE);
+			inbox.open(Folder.READ_ONLY);//inbox.open(Folder.READ_WRITE);
 			Message messages[] = inbox.search(new FlagTerm(new Flags(Flag.SEEN), false));
 			FetchProfile fp = new FetchProfile();
 			fp.add(FetchProfile.Item.ENVELOPE);
 			fp.add(FetchProfile.Item.CONTENT_INFO);
 			inbox.fetch(messages, fp);
-			inbox.setFlags(messages, new Flags(Flags.Flag.SEEN), true);
+			//inbox.setFlags(messages, new Flags(Flags.Flag.SEEN), true);
 			DMessage[] dm = new DMessage[messages.length];
 			for(int i=0; i<messages.length; i++) {
 				dm[i] = new DMessage(messages[i]);
@@ -252,6 +305,17 @@ public class Main {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	public void addToList(DMessage[] m) {
+		for(int i=0; i<m.length; i++) {
+			messages.add(m[i]);
+			listModel.addElement(m[i].getFrom() + " - " + m[i].getSubject()
+					+ "     " + DateFormat.getInstance().format(m[i].getDate()));
+			System.out.println("Message " + i + ": " + m[i].getFrom() + " - " 
+					+ m[i].getSubject() + "\t" + DateFormat.getInstance().format(m[i].getDate()));
+		}
+		messageList.setModel(listModel);
 	}
 	
 	public void sendMail(DMessage message) {
@@ -280,7 +344,7 @@ public class Main {
 		main.add(pField);
 		main.add(new JLabel("Host"));
 		String[] hosts = {"Gmail"};
-		final JComboBox<String> hostList = new JComboBox<String>(hosts);
+		final JComboBox hostList = new JComboBox(hosts);
 		hostList.setEditable(false);
 		main.add(hostList);
 		JButton saveButton = new JButton("Save Settings");

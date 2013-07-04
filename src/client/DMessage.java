@@ -62,6 +62,29 @@ public class DMessage {
 	public Date getDate() {return date;}
 	public String getid() {return id;}
 	
+	public String getToString() {
+		String s = "";
+		for(int i=0; i<to.length; i++) {
+			s += (to[i] + "; ");
+		}
+		return s;
+	}
+	public String getccString() {
+		String s = "";
+		for(int i=0; i<cc.length; i++) {
+			s += (cc[i] + "; ");
+		}
+		return s;
+	}
+	public String getbccString() {
+		String s = "";
+		for(int i=0; i<bcc.length; i++) {
+			s += (bcc[i] + "; ");
+		}
+		return s;
+	}
+	
+	
 	public MimeMessage getMimeMessage(Session session) throws MessagingException {
 		MimeMessage m = new MimeMessage(session);
 		m.setFrom(from);
